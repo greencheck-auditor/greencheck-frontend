@@ -1,6 +1,6 @@
 import Vitrine from "./Vitrine"; // ✅ Importa a Vitrine
 import ESGAnalyzer from "./components/ESGAnalyzer";
-import Apresentacao from "./components/Apresentacao";
+import Apresentacao from "./components/ui/Apresentacao";
 import PainelTransparencia from "./components/PainelTransparencia";
 import Certificado from "./Certificado";
 import Configuracoes from "./Configuracoes";
