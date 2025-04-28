@@ -1,24 +1,17 @@
-import React from "react";
 import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 
 export default function Vitrine() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-white dark:bg-gray-900 px-4">
-      <img
-        src="/logo-greencheck.png"
-        alt="Logo GreenCheck"
-        className="w-72 mb-4"
-      />
-
-      <p className="text-center text-gray-700 dark:text-gray-300 text-xl font-semibold mb-2">
+    <div className="flex flex-col items-center justify-center min-h-screen p-6">
+      <img src="/logo-greencheck.png" alt="GreenCheck" className="w-32 h-32 mb-6" />
+      <h1 className="text-3xl font-bold mb-4 text-center">
         Plataforma Inteligente de Análise ESG e Conformidade
-      </p>
-
-      <Link
-        to="/painel"
-        className="bg-green-700 hover:bg-green-800 text-white py-2 px-6 mt-4 rounded shadow transition duration-200 text-lg"
-      >
-        ✅ Acesse o Painel ESG
+      </h1>
+      <Link to="/analisar">
+        <Button className="bg-green-600 hover:bg-green-700 text-white text-lg px-6 py-3 rounded-xl shadow">
+          ✅ Acesse o Painel ESG
+        </Button>
       </Link>
     </div>
   );

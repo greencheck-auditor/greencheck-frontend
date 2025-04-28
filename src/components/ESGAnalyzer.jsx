@@ -311,19 +311,27 @@ localStorage.setItem("historico_esg", JSON.stringify([...historicoAtual, novoRel
     }
   
     try {
-      const response = await fetch("http://localhost:8000/send-email", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/send-email`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fileName, score, content: analysis, email }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_API_TOKEN}`,
+        },
+        body: JSON.stringify({
+          fileName,
+          score,
+          content: analysis,
+          email,
+        }),
       });
+  
       const res = await response.json();
-      alert(res.message || "📤 Enviado para o e-mail com sucesso!");
+      alert(res.message || "✅ Enviado para o e-mail com sucesso!");
     } catch (error) {
       alert("Erro ao enviar e-mail. Verifique o backend.");
     }
   };
   
-
   const handleSpeak = () => {
     const text = translated || analysis;
     if (!text) return;
@@ -711,4 +719,3 @@ localStorage.setItem("historico_esg", JSON.stringify([...historicoAtual, novoRel
   </div> 
 );
 }
-
