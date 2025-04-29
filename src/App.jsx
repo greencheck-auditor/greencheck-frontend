@@ -10,17 +10,6 @@ import { Routes, Route } from "react-router-dom";
 import Layout from "./layout/Layout";
 import ContatoFlutuante from "@/components/ui/ContatoFlutuante";
 
-function App() {
-  return (
-    <>
-      {/* ...suas rotas e páginas */}
-      <ContatoFlutuante /> {/* Botão Flutuante */}
-    </>
-  );
-}
-
-
-
 export default function App() {
   return (
     <>
@@ -38,6 +27,7 @@ export default function App() {
           </Route>
         </Routes>
       </div>
+      <ContatoFlutuante />
     </>
   );
 }
