@@ -1,3 +1,5 @@
+import React from "react";
+import { Routes, Route } from "react-router-dom";
 import Header from "@/components/ui/Header";
 import Vitrine from "./Vitrine";
 import ESGAnalyzer from "./components/ESGAnalyzer";
@@ -6,7 +8,6 @@ import PainelTransparencia from "./components/PainelTransparencia";
 import Certificado from "./Certificado";
 import Configuracoes from "./Configuracoes";
 import Relatorios from "./Relatorios";
-import { Routes, Route } from "react-router-dom";
 import Layout from "./layout/Layout";
 import ContatoFlutuante from "@/components/ui/ContatoFlutuante";
 
@@ -14,7 +15,7 @@ export default function App() {
   return (
     <>
       <Header />
-      <div className="pt-24"> {/* espaço para não ficar coberto pelo header */}
+      <div className="pt-24">
         <Routes>
           <Route path="/" element={<Layout />}>
             <Route index element={<Vitrine />} />
