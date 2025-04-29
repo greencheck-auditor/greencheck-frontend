@@ -8,7 +8,7 @@ import Certificado from "./Certificado";
 import Configuracoes from "./Configuracoes";
 import Relatorios from "./Relatorios";
 import { Routes, Route } from "react-router-dom";
-import Layout from "./layout/Layout";
+import Layout from "./Layout";
 import ContatoFlutuante from "@/components/ui/ContatoFlutuante";
 
 export default function App() {
