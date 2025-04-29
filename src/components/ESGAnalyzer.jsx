@@ -144,7 +144,6 @@ export default function ESGAnalyzer() {
 const handleAnalyze = async () => {
   if (!file) return;
 
-  // Ativando estado de análise
   setAnalyzing(true);
   setAnalysis("");
   setTranslated("");
@@ -157,9 +156,7 @@ const handleAnalyze = async () => {
   try {
     const token = import.meta.env.VITE_API_TOKEN;
 
-
     const res = await fetch(`${import.meta.env.VITE_API_URL}/analyze`, {
-
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`
@@ -169,18 +166,16 @@ const handleAnalyze = async () => {
 
     const data = await res.json();
     console.log("Retorno do backend:", data);
-    // Limpa caracteres invisíveis do conteúdo analisado
-    setAnalysisData(data);
-    setScore(data.score);
-    setCnpjInfo(data.cnpj_info); 
-    setPublicData(filtrarDadosPublicos(data.dados_publicos));
-    setDadosOrgaos(data.orgaos_publicos);
-    
-    const cleanText = (data.analysis || "").replace(/[\x00-\x1F\x7F]/g, "");
-    setAnalysis(cleanText); // Mostra no textarea
-    setScore(data.score || null); // Exibe score ESG se disponível
 
-    // Monta e salva nova entrada no histórico com segurança estilo blockchain
+    // Limpa caracteres invisíveis do texto analisado
+    const cleanText = (data.analysis || "").replace(/[\x00-\x1F\x7F]/g, "");
+    setAnalysis(cleanText);
+    setScore(data.score || null);
+    setCnpjInfo(data.cnpj_info || {});
+    setPublicData(filtrarDadosPublicos(data.dados_publicos || {}));
+    setDadosOrgaos(data.orgaos_publicos || []);
+
+    // Monta nova entrada para histórico blockchain
     const newEntry = {
       name: file.name,
       score: data.score || "N/A",
@@ -188,53 +183,54 @@ const handleAnalyze = async () => {
       previousHash: lastHash,
       antifraude: data.dados_publicos?.status === "ATIVA" ? "Verificado" : "Pendente"
     };
-    
+
     const newHash = calculateHash(newEntry);
     setLastHash(newHash);
     setHistory((prev) => [...prev, { ...newEntry, hash: newHash }]);
 
-    // Traduz se o idioma for diferente de pt
+    // Se idioma não for português, traduz automaticamente
     if (language !== "pt") {
       await handleTranslate(cleanText);
     }
-  } catch (err) {
-    setAnalysis("Erro na análise. Verifique o backend.");
+
+    // Atualiza localStorage (Painel de Transparência)
+    const historicoAtual = JSON.parse(localStorage.getItem("historico_esg")) || [];
+    const novoRelatorio = {
+      name: file.name,
+      date: new Date().toLocaleString(),
+      score: data.score || "N/A",
+      hash: newHash,
+      antifraude: publicData ? "Verificado" : "Pendente"
+    };
+    localStorage.setItem("historico_esg", JSON.stringify([...historicoAtual, novoRelatorio]));
+
+  } catch (error) {
+    console.error("Erro ao analisar:", error);
+    alert("Erro ao analisar documento. Verifique a conexão com o servidor.");
   } finally {
-   // Salvar no localStorage (Painel de Transparência)
-const historicoAtual = JSON.parse(localStorage.getItem("historico_esg")) || [];
-const novoRelatorio = {
-  name: file.name,
-  date: new Date().toLocaleString(),
-  score: data.score || "N/A",
-  hash: newHash,
-  antifraude: publicData ? "Verificado" : "Pendente"
-};
-localStorage.setItem("historico_esg", JSON.stringify([...historicoAtual, novoRelatorio]));
- 
     setAnalyzing(false);
   }
 };
 
-  const handleTranslate = async (text) => {
+
+const handleTranslate = async (text) => {
+  try {
     if (!text) return;
-    try {
-      const res = await fetch("https://libretranslate.de/translate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ q: text, source: "auto", target: language, format: "text" })
-      });
-      
-      const data = await res.json();
-      if (data && data.translatedText) {
-        setTranslated(data.translatedText);
-        setShowTranslated(true);  // <-- Isso garante que a tradução apareça logo
-      } else {
-        setTranslated("⚠️ Erro ao traduzir.");
-      }
-    } catch (err) {
-      setTranslated("⚠️ Erro ao traduzir.");
+
+    const response = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=pt|en`);
+    const data = await response.json();
+
+    if (data && data.responseData && data.responseData.translatedText) {
+      setTranslated(data.responseData.translatedText);
+    } else {
+      alert("Falha ao traduzir. Tente novamente.");
     }
-  };
+  } catch (error) {
+    console.error("Erro ao traduzir:", error);
+    alert("Erro de conexão na tradução.");
+  }
+};
+
   
 
   const handleExportPDF = async () => {
@@ -396,101 +392,101 @@ localStorage.setItem("historico_esg", JSON.stringify([...historicoAtual, novoRel
          </div>
 
          <Button
-           onClick={handleAnalyze}
-           disabled={!file || analyzing}
-           className="w-full bg-green-700 hover:bg-green-800 text-white shadow-md cursor-pointer transition duration-200"
-         >
-           {analyzing ? (
-             <>
-               <Loader2 className="animate-spin mr-2" /> {t.analyze}
-             </>
-           ) : (
-             t.analyze
-           )}
-         </Button>
+  onClick={handleAnalyze}
+  disabled={!file}
+  className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-full shadow-md transition transform hover:scale-105"
+>
+  {analyzing ? "Analisando..." : "Analisar"}
+</Button>
 
-         <div className="grid grid-cols-3 gap-4 mb-4">
-           <Button
-             onClick={handleExportPDF}
-             disabled={!analysis}
-             className="bg-green-600 hover:bg-green-700 text-white"
-           >
-             {t.exportPDF}
-           </Button>
+  
+  <Button
+    onClick={handleTranslate}
+    disabled={!analysis}
+    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-full shadow-md transition transform hover:scale-105"
+  >
+    Traduzir
+  </Button>
 
-           <Button
-             onClick={() => handleTranslate(analysis)}
-             disabled={!analysis}
-             className="bg-green-600 hover:bg-green-700 text-white"
-           >
-             {t.translateText}
-           </Button>
+{/* Botões principais */}
+<div className="grid grid-cols-3 gap-4 mb-4">
+  <Button
+    onClick={handleExportPDF}
+    disabled={!analysis}
+    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-full shadow-md transition transform hover:scale-105"
+  >
+    {t.exportPDF}
+  </Button>
 
-           {!speaking ? (
-             <Button
-               onClick={handleSpeak}
-               disabled={!analysis}
-               className="bg-green-600 hover:bg-green-700 text-white"
-             >
-               {t.listening}
-             </Button>
-           ) : (
-             <Button
-               onClick={handleStopSpeaking}
-               className="bg-red-600 hover:bg-red-700 text-white"
-             >
-               {t.stop}
-             </Button>
-           )}
-         </div>
+  <Button
+    onClick={handleTranslate}
+    disabled={!analysis}
+    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-full shadow-md transition transform hover:scale-105"
+  >
+    Traduzir
+  </Button>
 
-         <div className="flex flex-col md:flex-row gap-2 items-center col-span-3">
-           <Input
-             type="email"
-             placeholder="Digite seu e-mail para envio"
-             value={email}
-             onChange={(e) => setEmail(e.target.value)}
-             className="flex-1 rounded px-3 py-2 border border-gray-300 w-full"
-           />
-           <Button
-             onClick={handleSendEmail}
-             disabled={!analysis}
-             className="bg-green-600 hover:bg-green-700 text-white px-4 py-2"
-           >
-             {t.emailButton}
-           </Button>
-         </div>
+  {!speaking ? (
+    <Button
+      onClick={handleSpeak}
+      disabled={!analysis}
+      className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-full shadow-md transition transform hover:scale-105"
+    >
+      {t.listening}
+    </Button>
+  ) : (
+    <Button
+      onClick={handleStopSpeaking}
+      className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-full shadow-md transition transform hover:scale-105"
+    >
+      {t.stop}
+    </Button>
+  )}
+</div>
 
-         {translated && (
-           <Button
-             onClick={() => setShowTranslated(!showTranslated)}
-             className="w-full bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600"
-           >
-             {t.toggleText}
-           </Button>
-         )}
+{/* Campo de E-mail + Botão de Enviar */}
+<div className="flex flex-col md:flex-row gap-2 items-center justify-center col-span-3">
+  <Input
+    type="email"
+    placeholder="Digite seu e-mail para envio"
+    value={email}
+    onChange={(e) => setEmail(e.target.value)}
+    className="flex-1 rounded-lg px-4 py-2 border border-gray-300 dark:border-gray-700 w-full shadow-sm"
+  />
+  <Button
+    onClick={handleSendEmail}
+    disabled={!analysis}
+    className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-full shadow-md transition transform hover:scale-105"
+  >
+    {t.emailButton}
+  </Button>
+</div>
 
-         <Textarea
-           readOnly
-           value={
-             showTranslated && translated && !translated.includes("Erro ao traduzir")
-               ? translated
-               : analysis
-           }
-           placeholder={t.placeholder}
-           className="min-h-[500px] bg-white text-black dark:bg-gray-800 dark:text-white"
-         />
+{/* Textarea Resultado da Análise */}
+<div className="mt-6">
+  <Textarea
+    readOnly
+    value={
+      showTranslated && translated && !translated.includes("Erro ao traduzir")
+        ? translated
+        : analysis
+    }
+    placeholder={t.placeholder}
+    className="w-full p-5 rounded-lg bg-gray-100 dark:bg-gray-800 dark:text-white text-black min-h-[500px] shadow-md focus:outline-none resize-none"
+  />
+</div>
 
-         <div className="mt-4">
-           <a
-             href="https://www.ifrs.org/issued-standards/list-of-standards/"
-             target="_blank"
-             rel="noopener noreferrer"
-             className="text-blue-700 underline hover:text-blue-900"
-           >
-             📘 {t.viewStandards}
-           </a>
-         </div>
+{/* Link para Normas */}
+<div className="mt-4 text-center">
+  <a
+    href="https://www.ifrs.org/issued-standards/list-of-standards/"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="text-blue-700 underline hover:text-blue-900"
+  >
+    📘 {t.viewStandards}
+  </a>
+</div>
 
          {score && (
            <div
