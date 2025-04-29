@@ -12,8 +12,8 @@ export default function ContatoSection() {
         Entre em Contato
       </h2>
       <p className="text-gray-600 dark:text-gray-300 mb-8 max-w-2xl">
-        Ficou com alguma dúvida ou quer saber mais sobre o GreenCheck?
-        Envie sua mensagem para nós!
+        Ficou com alguma dúvida ou quer saber mais sobre o GreenCheck? Envie sua
+        mensagem para nós!
       </p>
 
       <form className="w-full max-w-md space-y-4">
@@ -40,5 +40,5 @@ export default function ContatoSection() {
         </Button>
       </form>
     </section>
-);
+  );
 }
