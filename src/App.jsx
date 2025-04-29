@@ -1,3 +1,8 @@
+import React from "react";
+import { Routes, Route } from "react-router-dom";
+import Header from "@/components/ui/Header";
+import Vitrine from "./Vitrine";
+import ESGAnalyzer from "./components/ESGAnalyzer";
 import Apresentacao from "./components/ui/Apresentacao";
 import PainelTransparencia from "./components/PainelTransparencia";
 import Certificado from "./Certificado";
@@ -5,11 +10,6 @@ import Configuracoes from "./Configuracoes";
 import Relatorios from "./Relatorios";
 import Layout from "./layout/Layout";
 import ContatoFlutuante from "@/components/ui/ContatoFlutuante";
-import Header from "@/components/ui/Header";
-import Vitrine from "./Vitrine";
-import ESGAnalyzer from "./components/ESGAnalyzer";
-import { Routes, Route } from "react-router-dom";
-import React from "react";
 
 export default function App() {
   return (
@@ -32,3 +32,4 @@ export default function App() {
     </>
   );
 }
+
