@@ -1,13 +1,13 @@
 import React from "react";
-import { Routes, Route } from "react-router-dom";
 import Header from "@/components/ui/Header";
 import Vitrine from "./Vitrine";
 import ESGAnalyzer from "./components/ESGAnalyzer";
-import Apresentacao from "./components/ui/Apresentacao";
-import PainelTransparencia from "./components/PainelTransparencia";
+import Apresentacao from "@/components/ui/Apresentacao";
+import PainelTransparencia from "@/components/ui/PainelTransparencia";
 import Certificado from "./Certificado";
 import Configuracoes from "./Configuracoes";
 import Relatorios from "./Relatorios";
+import { Routes, Route } from "react-router-dom";
 import Layout from "./layout/Layout";
 import ContatoFlutuante from "@/components/ui/ContatoFlutuante";
 
@@ -32,4 +32,3 @@ export default function App() {
     </>
   );
 }
-
