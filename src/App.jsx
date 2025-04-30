@@ -1,15 +1,15 @@
 import React from "react";
-import Header from "@/components/ui/Header";
+import Header from "./components/ui/Header.jsx";
 import Vitrine from "./Vitrine";
 import ESGAnalyzer from "./components/ESGAnalyzer";
-import Apresentacao from "@/components/ui/Apresentacao";
-import PainelTransparencia from "@/components/ui/PainelTransparencia";
+import Apresentacao from "./components/ui/Apresentacao.jsx";
+import PainelTransparencia from "./components/ui/PainelTransparencia.jsx";
 import Certificado from "./Certificado";
 import Configuracoes from "./Configuracoes";
 import Relatorios from "./Relatorios";
 import { Routes, Route } from "react-router-dom";
 import Layout from "./Layout";
-import ContatoFlutuante from "@/components/ui/ContatoFlutuante";
+import ContatoFlutuante from "./components/ui/ContatoFlutuante.jsx";
 
 export default function App() {
   return (
