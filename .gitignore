@@ -7,18 +7,32 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Node.js dependencies
 node_modules
+
+# Vite build output
 dist
 dist-ssr
+
+# Ambiente local
+.env
 *.local
 
-# Editor directories and files
-.vscode/*
+# Editor config
+.vscode/
 !.vscode/extensions.json
-.idea
+.idea/
 .DS_Store
+
+# Visual Studio/JetBrains
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+# Arquivos temporários
+*.tmp
+
+# PDFs temporários gerados no frontend
+temp_*.pdf

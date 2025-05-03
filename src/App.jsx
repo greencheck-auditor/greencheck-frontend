@@ -1,6 +1,5 @@
 import React from "react";
 import Header from "./components/ui/Header.jsx";
-import Vitrine from "./Vitrine";
 import ESGAnalyzer from "./components/ESGAnalyzer";
 import Apresentacao from "./components/ui/Apresentacao.jsx";
 import PainelTransparencia from "./components/ui/PainelTransparencia.jsx";
@@ -10,12 +9,15 @@ import Relatorios from "./Relatorios";
 import { Routes, Route } from "react-router-dom";
 import Layout from "./Layout";
 import ContatoFlutuante from "./components/ui/ContatoFlutuante.jsx";
+import Vitrine from "./Vitrine";
+import QuemSomos from "./components/ui/QuemSomos";
+
 
 export default function App() {
   return (
     <>
       <Header />
-      <div className="pt-24">
+      <div>
         <Routes>
           <Route path="/" element={<Layout />}>
             <Route index element={<Vitrine />} />
@@ -25,6 +27,7 @@ export default function App() {
             <Route path="certificado" element={<Certificado />} />
             <Route path="configuracoes" element={<Configuracoes />} />
             <Route path="relatorios" element={<Relatorios />} />
+            <Route path="quem-somos" element={<QuemSomos />} />
           </Route>
         </Routes>
       </div>
@@ -32,3 +35,4 @@ export default function App() {
     </>
   );
 }
+

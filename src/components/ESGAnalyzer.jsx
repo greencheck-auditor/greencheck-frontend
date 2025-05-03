@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Moon, Sun, Mail, FileText, QrCode, Lock, Globe, RefreshCcw } from "lucide-react";
+import { Loader2, Lock, RefreshCcw, CheckCircle, Globe } from "lucide-react";
 import { motion } from "framer-motion";
 import jsPDF from "jspdf";
 import QRCode from "qrcode";
@@ -11,8 +11,13 @@ import sha256 from "crypto-js/sha256";
 import robot from "@/assets/robot.png";
 import background from "@/assets/grafico-fundo.png";
 import seloCertificado from "@/assets/selo-certificado.png";
-import { CheckCircle } from "lucide-react";
 import { gerarCertificado } from "../utils/gerarCertificado";
+import ExportButtons from "@/components/ui/ExportButtons";
+import NormasLink from "@/components/ui/NormasLink";
+import { Link } from "react-router-dom";
+
+
+
 
 const filtrarDadosPublicos = (dados) => {
   const copia = { ...dados };
@@ -42,63 +47,7 @@ const translations = {
     blockchainLabel: "Histórico com Segurança Blockchain",
     emailButton: "Enviar por E-mail"
   },
-  en: {
-    title: "GreenCheck",
-    description: "Intelligent ESG and Compliance Analysis Platform",
-    analyze: "Analyze",
-    exportPDF: "Export PDF",
-    exportHistory: "History",
-    listening: "Listen",
-    stop: "Stop",
-    translateText: "Translate",
-    toggleText: "Toggle Translated Text",
-    placeholder: "ESG analysis result...",
-    noFile: "No file chosen",
-    fileLabel: "Choose file",
-    scoreInfo: "ESG Score: ",
-    compliant: "✔️ Compliant with GreenCheck standards.",
-    viewStandards: "Consultar Normas em Português e Inglês",
-    blockchainLabel: "Histórico com Segurança Blockchain",
-    emailButton: "Enviar por E-mail"
-  },
-  es: {
-    title: "GreenCheck",
-    description: "Plataforma Inteligente de Análisis ESG y Cumplimiento",
-    analyze: "Analizar",
-    exportPDF: "Exportar PDF",
-    exportHistory: "Historial",
-    listening: "Escuchar",
-    stop: "Detener",
-    translateText: "Traducir",
-    toggleText: "Alternar texto traducido",
-    placeholder: "Resultado del análisis ESG...",
-    noFile: "Ningún archivo elegido",
-    fileLabel: "Elegir archivo",
-    scoreInfo: "Puntuación ESG: ",
-    compliant: "✔️ Cumple con los estándares de GreenCheck.",
-    viewStandards: "Consultar Normas em Português e Inglês",
-    blockchainLabel: "Histórico com Segurança Blockchain",
-    emailButton: "Enviar por E-mail"
-  },
-  fr: {
-    title: "GreenCheck",
-    description: "Plateforme intelligente d'analyse ESG et de conformité",
-    analyze: "Analyser",
-    exportPDF: "Exporter PDF",
-    exportHistory: "Historique",
-    listening: "Écouter",
-    stop: "Arrêter",
-    translateText: "Traduire",
-    toggleText: "Basculer le texte traduit",
-    placeholder: "Résultat de l'analyse ESG...",
-    noFile: "Aucun fichier choisi",
-    fileLabel: "Choisir un fichier",
-    scoreInfo: "Score ESG : ",
-    compliant: "✔️ Conforme aux standards de GreenCheck.",
-    viewStandards: "Consultar Normas em Português e Inglês",
-    blockchainLabel: "Histórico com Segurança Blockchain",
-    emailButton: "Enviar por E-mail"
-  }
+  // outras traduções...
 };
 
 export default function ESGAnalyzer() {
@@ -114,7 +63,6 @@ export default function ESGAnalyzer() {
   const [lastHash, setLastHash] = useState("0000000000");
   const [history, setHistory] = useState([]);
   const [filter, setFilter] = useState("");
-  const [score, setScore] = useState(null);
   const [email, setEmail] = useState("");
   const [cnpjInfo, setCnpjInfo] = useState(null);
   const [publicData, setPublicData] = useState(null);
@@ -123,9 +71,15 @@ export default function ESGAnalyzer() {
   const [dadosOrgaos, setDadosOrgaos] = useState(null);
   const [analysisData, setAnalysisData] = useState({});
   const empresa = analysisData?.empresa || "Empresa Auditada";
-
+  const [arquivo, setArquivo] = useState(null);
+  const [conteudo, setConteudo] = useState("");
+  const [resultado, setResultado] = useState("");
+  const [carregando, setCarregando] = useState(false);
+  const [historico, setHistorico] = useState([]);
+  const [score, setScore] = useState(null);
+  const [mostrarCNPJ, setMostrarCNPJ] = useState(false);
   const t = translations[language] || translations["pt"];
- 
+
   useEffect(() => {
     localStorage.setItem("language", language);
     document.documentElement.classList.toggle("dark", darkMode);
@@ -138,174 +92,162 @@ export default function ESGAnalyzer() {
   }, []);
 
   const calculateHash = (entry) => {
-  return sha256(JSON.stringify(entry)).toString();
-};
+    return sha256(JSON.stringify(entry)).toString();
+  };
 
-const handleAnalyze = async () => {
-  if (!file) return;
-
-  setAnalyzing(true);
-  setAnalysis("");
-  setTranslated("");
-  setFileName(file.name);
-  setDadosOrgaos(data.orgaos_publicos);
-
-  const formData = new FormData();
-  formData.append("file", file);
-
-  try {
-    const token = import.meta.env.VITE_API_TOKEN;
-
-    const res = await fetch(`${import.meta.env.VITE_API_URL}/analyze`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`
-      },
-      body: formData
-    });
-
-    const data = await res.json();
-    console.log("Retorno do backend:", data);
-
-    // Limpa caracteres invisíveis do texto analisado
-    const cleanText = (data.analysis || "").replace(/[\x00-\x1F\x7F]/g, "");
-    setAnalysis(cleanText);
-    setScore(data.score || null);
-    setCnpjInfo(data.cnpj_info || {});
-    setPublicData(filtrarDadosPublicos(data.dados_publicos || {}));
-    setDadosOrgaos(data.orgaos_publicos || []);
-
-    // Monta nova entrada para histórico blockchain
-    const newEntry = {
-      name: file.name,
-      score: data.score || "N/A",
-      date: new Date().toLocaleString(),
-      previousHash: lastHash,
-      antifraude: data.dados_publicos?.status === "ATIVA" ? "Verificado" : "Pendente"
-    };
-
-    const newHash = calculateHash(newEntry);
-    setLastHash(newHash);
-    setHistory((prev) => [...prev, { ...newEntry, hash: newHash }]);
-
-    // Se idioma não for português, traduz automaticamente
-    if (language !== "pt") {
-      await handleTranslate(cleanText);
-    }
-
-    // Atualiza localStorage (Painel de Transparência)
-    const historicoAtual = JSON.parse(localStorage.getItem("historico_esg")) || [];
-    const novoRelatorio = {
-      name: file.name,
-      date: new Date().toLocaleString(),
-      score: data.score || "N/A",
-      hash: newHash,
-      antifraude: publicData ? "Verificado" : "Pendente"
-    };
-    localStorage.setItem("historico_esg", JSON.stringify([...historicoAtual, novoRelatorio]));
-
-  } catch (error) {
-    console.error("Erro ao analisar:", error);
-    alert("Erro ao analisar documento. Verifique a conexão com o servidor.");
-  } finally {
-    setAnalyzing(false);
-  }
-};
-
-
-const handleTranslate = async (text) => {
-  try {
-    if (!text) return;
-
-    const response = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=pt|en`);
-    const data = await response.json();
-
-    if (data && data.responseData && data.responseData.translatedText) {
-      setTranslated(data.responseData.translatedText);
-    } else {
-      alert("Falha ao traduzir. Tente novamente.");
-    }
-  } catch (error) {
-    console.error("Erro ao traduzir:", error);
-    alert("Erro de conexão na tradução.");
-  }
-};
-
+  const handleStopSpeaking = () => {
+    speechSynthesis.cancel();
+    setSpeaking(false);
+  };
   
+  const handleFileChange = (e) => {
+    const selectedFile = e.target.files[0];
+    setFile(selectedFile);
+    setTranslated("");
+    setAnalysis("");
+  };
+  
+  const handleAnalyze = async () => {
+    if (!file) return;
+
+    setAnalyzing(true);
+    setAnalysis("");
+    setTranslated("");
+    setFileName(file.name);
+   
+    
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/analyze`, {
+        method: "POST",
+        body: formData,
+      });
+      
+      
+
+      const data = await res.json();
+      const cleanText = (data.texto || "").replace(/[\x00-\x1F\x7F]/g, "");
+      setAnalysis(cleanText);
+      setScore(data.score || null);
+      setCnpjInfo(data.cnpj_info || {});
+      setPublicData(filtrarDadosPublicos(data.dados_publicos || {}));
+      setDadosOrgaos(data.orgaos_publicos || []);
+      
+
+      const newEntry = {
+        name: file.name,
+        score: data.score || "N/A",
+        date: new Date().toLocaleString(),
+        previousHash: lastHash,
+        antifraude: data.dados_publicos?.status === "ATIVA" ? "Verificado" : "Pendente"
+      };
+
+      const newHash = calculateHash(newEntry);
+      setLastHash(newHash);
+      setHistory((prev) => [...prev, { ...newEntry, hash: newHash }]);
+
+      if (language !== "pt") {
+        await handleTranslate(cleanText);
+      }
+
+      const historicoAtual = JSON.parse(localStorage.getItem("historico_esg")) || [];
+      const novoRelatorio = {
+        name: file.name,
+        date: new Date().toLocaleString(),
+        score: data.score || "N/A",
+        hash: newHash,
+        antifraude: publicData ? "Verificado" : "Pendente"
+      };
+      localStorage.setItem("historico_esg", JSON.stringify([...historicoAtual, novoRelatorio]));
+      setHistorico((prev) => [
+        ...prev,
+        {
+          nome: file.name,
+          hash: newHash,
+          data: new Date().toISOString(),
+          conteudo: cleanText,
+        },
+      ]);
+      
+
+    } catch (error) {
+      console.error("Erro ao analisar:", error);
+      alert("Erro ao analisar documento.");
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  const handleTranslate = async (text) => {
+    try {
+      if (!text) return;
+      const response = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=pt|en`);
+      const data = await response.json();
+      console.log("🔍 RESPOSTA DO BACKEND:", data);
+      if (data?.responseData?.translatedText) {
+        setTranslated(data.responseData.translatedText);
+      } else {
+        alert("Falha ao traduzir.");
+      }
+    } catch (error) {
+      alert("Erro de conexão na tradução.");
+    }
+  };
 
   const handleExportPDF = async () => {
-   console.log("Iniciando exportação...");
     const doc = new jsPDF();
     const currentDate = new Date().toLocaleString();
-    const text = translated && !translated.includes("Erro ao traduzir") ? translated : analysis;
+    const text = translated || analysis;
     const cleanText = (text || "(sem conteúdo)").normalize("NFKD").replace(/[^\x00-\x7F]/g, "");
-     
-    // Cabeçalho
-  
+
     doc.setFontSize(16);
     doc.text("GreenCheck - Análise ESG", 20, 20);
     doc.setFontSize(12);
     doc.text(`Arquivo: ${fileName}`, 20, 30);
     doc.text(`Data: ${currentDate}`, 20, 38);
     doc.text("Resultado da Análise:", 20, 48);
-  
-    // Selo no canto superior direito
+
     if (score && parseInt(score) >= 70) {
       doc.addImage(seloCertificado, "PNG", 150, 10, 35, 35);
     }
-  
-    // Texto da análise
+
     const lines = doc.splitTextToSize(cleanText, 170);
     doc.text(lines, 20, 58);
-  
+
     let y = 58 + lines.length * 7 + 10;
-  
-    // Score e mensagem de conformidade
     if (score && parseInt(score) >= 70) {
-      doc.setTextColor(0, 150, 0);// verde
+      doc.setTextColor(0, 150, 0);
       doc.setFont("helvetica", "bold");
       doc.text(`${t.scoreInfo}${score}%`, 20, y);
       y += 8;
       doc.text(t.compliant.normalize("NFKD").replace(/[^\x00-\x7F]/g, ""), 20, y);
       doc.setTextColor(0, 0, 0);
       doc.setFont("helvetica", "normal");
-    } else if (score) {
-      doc.setTextColor(200, 0, 0);// vermelho
-      doc.text(`${t.scoreInfo}${score}%`, 20, y);
-      y += 8;
-      doc.text("⚠️ Documento fora dos critérios do GreenCheck.", 20, y);
-      doc.setTextColor(0, 0, 0);
     }
-  
-    y += 20;
-    
-    // QR Code + Assinatura
-    const qrCode = await QRCode.toDataURL(`GreenCheck|Arquivo: ${fileName} | Score: ${score} | Data: ${currentDate}`)
-    doc.addImage(qrCode, "PNG", 20, y, 30, 30);
-  
-   // Assinatura
-    doc.setFontSize(10);
-    doc.text("Assinado digitalmente por:", 60, y + 5);
-    doc.text("Kamila Silva - GreenCheck", 60, y + 11);
-    doc.text(`Data e Hora: ${currentDate}`, 60, y + 17);
-  
- // Linha de assinatura manuscrita
-     y += 35;
-    doc.setLineWidth(0.5);
-    doc.line(20, 270,130,270);  // x1,y1,x2,y2 linha horizontal
-    doc.text("Assinatura Manual", 20, y + 45);
-    doc.text("Kamila Silva - GreenCheck", 20, y + 50);
 
-    // Salvar PDF
+    const qrCode = await QRCode.toDataURL(`GreenCheck|Arquivo: ${fileName} | Score: ${score} | Data: ${currentDate}`);
+    doc.addImage(qrCode, "PNG", 20, y + 20, 30, 30);
+
+    doc.setFontSize(10);
+    doc.text("Assinado digitalmente por:", 60, y + 25);
+    doc.text("Kamila Silva - GreenCheck", 60, y + 31);
+    doc.text(`Data e Hora: ${currentDate}`, 60, y + 37);
+
+    doc.line(20, 270, 130, 270);
+    doc.text("Assinatura Manual", 20, y + 50);
+    doc.text("Kamila Silva - GreenCheck", 20, y + 55);
+
     doc.save(`Relatorio_ESG_${fileName}.pdf`);
   };
-  
+
   const handleSendEmail = async () => {
     if (!email) {
       alert("Endereço de e-mail não fornecido.");
       return;
     }
-  
+
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/send-email`, {
         method: "POST",
@@ -320,14 +262,14 @@ const handleTranslate = async (text) => {
           email,
         }),
       });
-  
+
       const res = await response.json();
       alert(res.message || "✅ Enviado para o e-mail com sucesso!");
     } catch (error) {
-      alert("Erro ao enviar e-mail. Verifique o backend.");
+      alert("Erro ao enviar e-mail.");
     }
   };
-  
+
   const handleSpeak = () => {
     const text = translated || analysis;
     if (!text) return;
@@ -341,377 +283,242 @@ const handleTranslate = async (text) => {
     speechSynthesis.speak(utterance);
   };
 
-  const handleStopSpeaking = () => {
-    speechSynthesis.cancel();
-    setSpeaking(false);
-  };
-
   return (
-   <div className={`min-h-screen transition-colors duration-500 ${darkMode ? "bg-gray-900 text-white" : "bg-white text-black"}`} style={{ backgroundImage: `url(${background})`, backgroundSize: '1119px auto', backgroundRepeat: 'no-repeat', backgroundPosition: 'top center' }}>
-      <div className="w-full bg-green-700 text-white py-3 px-6 flex items-center justify-between fixed top-0 left-0 z-50 shadow-md">
-        <div className="flex items-center gap-3">
-          <img src={robot} alt="Logo" className="w-26 h-24 drop-shadow-xl" />
-          <div>
-            <h1 className="text-7xl font-black drop-shadow-xl text-green-500">Green<span className="text-black dark:text-white">Check</span></h1>
-            <p className="text-sm text-white drop-shadow-sm">Plataforma Inteligente de Análise ESG e Conformidade</p>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <select value={language} onChange={(e) => setLanguage(e.target.value)} className="text-black rounded px-2 py-1">
-            <option value="pt">Português</option>
-            <option value="en">English</option>
-            <option value="es">Español</option>
-            <option value="fr">Français</option>
-          </select>
-          
-          <Button onClick={() => setDarkMode(!darkMode)} className="bg-white text-black dark:bg-gray-800 dark:text-white">
-            {darkMode ? <Sun /> : <Moon />}
-          </Button>
-        </div>
-      </div>
-
-      <motion.div
-     className="max-w-4xl mx-auto w-full pt-[22rem] p-6 z-10 relative"
-     initial={{ opacity: 0 }}
-     animate={{ opacity: 1 }}
-     transition={{ duration: 0.5 }}
-   >
-     <Card>
-       <CardContent className="space-y-4 p-6">
-         <label className="block">
-           <Input
-             type="file"
-             onChange={(e) => setFile(e.target.files[0])}
-             className="file:bg-green-700 file:text-white"
-             title={t.fileLabel}
-           />
-         </label>
-
-         <div className="text-sm text-gray-600 dark:text-gray-300">
-           {fileName || t.noFile}
-         </div>
-
-         <Button
-  onClick={handleAnalyze}
-  disabled={!file}
-  className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-full shadow-md transition transform hover:scale-105"
->
-  {analyzing ? "Analisando..." : "Analisar"}
-</Button>
-
-  
-  <Button
-    onClick={handleTranslate}
-    disabled={!analysis}
-    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-full shadow-md transition transform hover:scale-105"
-  >
-    Traduzir
-  </Button>
+    <div
+      className="min-h-screen transition-colors duration-500"
+      style={{
+        backgroundImage: `url(${background})`,
+        backgroundSize: "1119px auto",
+        backgroundRepeat: "no-repeat",
+        backgroundPosition: "top center",
+      }}
+    >
+     {/* Upload do arquivo */}
+<div className="w-full flex justify-center px-4 mt-8">
+  <div className="w-full max-w-4xl bg-white/90 rounded-xl p-4 shadow-md">
+    <input
+      type="file"
+      accept=".pdf,.doc,.docx,.txt"
+      onChange={handleFileChange}
+      className="w-full text-gray-700 bg-white rounded-md border border-gray-300 p-2 shadow-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-green-600 file:text-white hover:file:bg-green-700"
+    />
+  </div>
+</div>
 
 {/* Botões principais */}
-<div className="grid grid-cols-3 gap-4 mb-4">
+<div className="flex flex-wrap gap-4 justify-center mt-10">
   <Button
-    onClick={handleExportPDF}
-    disabled={!analysis}
-    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-full shadow-md transition transform hover:scale-105"
+    onClick={handleAnalyze}
+    disabled={!file}
+    className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-xl shadow-md"
   >
-    {t.exportPDF}
+    {analyzing ? "Analisando..." : t.analyze}
   </Button>
 
   <Button
     onClick={handleTranslate}
     disabled={!analysis}
-    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-full shadow-md transition transform hover:scale-105"
+    className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-xl shadow-md"
   >
-    Traduzir
+    {t.translateText}
+  </Button>
+
+  <Button
+    onClick={handleExportPDF}
+    className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-xl shadow-md"
+  >
+    Exportar PDF
   </Button>
 
   {!speaking ? (
     <Button
       onClick={handleSpeak}
       disabled={!analysis}
-      className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-full shadow-md transition transform hover:scale-105"
+      className="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-2 rounded-xl shadow-md"
     >
       {t.listening}
     </Button>
   ) : (
     <Button
       onClick={handleStopSpeaking}
-      className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-full shadow-md transition transform hover:scale-105"
+      className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-xl shadow-md"
     >
       {t.stop}
     </Button>
   )}
 </div>
 
-{/* Campo de E-mail + Botão de Enviar */}
-<div className="flex flex-col md:flex-row gap-2 items-center justify-center col-span-3">
+{/* Campo de e-mail e botão de envio */}
+<div className="max-w-4xl mx-auto px-4 mt-10 flex flex-col md:flex-row items-center justify-center gap-4">
   <Input
     type="email"
     placeholder="Digite seu e-mail para envio"
     value={email}
     onChange={(e) => setEmail(e.target.value)}
-    className="flex-1 rounded-lg px-4 py-2 border border-gray-300 dark:border-gray-700 w-full shadow-sm"
+    className="flex-1 p-3 rounded-md border border-gray-300 bg-white text-gray-800 shadow-md w-full"
   />
   <Button
     onClick={handleSendEmail}
     disabled={!analysis}
-    className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-full shadow-md transition transform hover:scale-105"
+    className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-md shadow-md w-full md:w-auto"
   >
     {t.emailButton}
   </Button>
 </div>
 
-{/* Textarea Resultado da Análise */}
-<div className="mt-6">
-  <Textarea
-    readOnly
-    value={
-      showTranslated && translated && !translated.includes("Erro ao traduzir")
-        ? translated
-        : analysis
-    }
-    placeholder={t.placeholder}
-    className="w-full p-5 rounded-lg bg-gray-100 dark:bg-gray-800 dark:text-white text-black min-h-[500px] shadow-md focus:outline-none resize-none"
-  />
-</div>
-
-{/* Link para Normas */}
-<div className="mt-4 text-center">
-  <a
-    href="https://www.ifrs.org/issued-standards/list-of-standards/"
-    target="_blank"
-    rel="noopener noreferrer"
-    className="text-blue-700 underline hover:text-blue-900"
-  >
-    📘 {t.viewStandards}
-  </a>
-</div>
-
-         {score && (
-           <div
-             className={`font-semibold text-center pt-6 ${
-               parseInt(score) >= 70 ? "text-green-700 dark:text-green-400" : "text-red-600"
-             }`}
-           >
-             {parseInt(score) >= 70 && (
-  <>
-    <img
-      src={seloCertificado}
-      alt="Selo de Conformidade"
-      className="mx-auto w-20 h-20"
-    />
-    <button
-      onClick={() => gerarCertificado(empresa)}
-      className="mt-4 bg-green-700 hover:bg-green-800 text-white font-semibold py-2 px-4 rounded shadow"
-    >
-      📄 Gerar Certificado ESG
-    </button>
-  </>
-
-)}
-{dadosOrgaos && (
-  <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mt-4">
-    <h2 className="text-green-700 dark:text-green-300 font-bold mb-2">🔍 Validação com Órgãos Públicos</h2>
-    <ul className="text-sm list-disc list-inside">
-      {Object.entries(dadosOrgaos).map(([orgao, info]) => (
-        <li key={orgao}>
-          <strong>{orgao}:</strong> {info.status} {info.origem && `(${info.origem})`}
-        </li>
-      ))}
-    </ul>
-  </div>
-)}
-
-             {t.scoreInfo}
-             {score}%<br />
-             {parseInt(score) >= 70
-               ? t.compliant
-               : "⚠️ Documento fora dos critérios do GreenCheck."}
-           </div>
-         )}
-
-{publicData?.status === "ATIVA" && (
-  <div className="flex items-center justify-center gap-2 mt-2 text-green-600 font-bold">
-    <CheckCircle className="w-5 h-5" />
-    Dados Públicos Verificados com Base Oficial
-  </div>
-)}
-
-
-{cnpjInfo && (
-  <div className="mt-6 bg-white dark:bg-gray-800 rounded-md p-4 shadow-md border border-gray-300 dark:border-gray-700">
-    <h3 className="text-lg font-bold text-green-600 mb-2">📄 Informações do CNPJ</h3>
-    
-    {cnpjInfo.status === "não identificado" ? (
-  <p className="text-red-600 dark:text-red-400">
-    ❌ CNPJ não identificado no documento.
-  </p>
-) : (
-  <div className="space-y-2 text-sm text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800 p-4 rounded-md shadow border border-gray-300 dark:border-gray-700">
-    <p><strong className="text-green-600">✅ Status:</strong> {cnpjInfo.status}</p>
-    <p><strong className="text-green-600">🏢 Razão Social:</strong> {cnpjInfo.razao_social}</p>
-    <p><strong className="text-green-600">📅 Abertura:</strong> {cnpjInfo.abertura}</p>
-  </div>
-)}
-    
-  </div>
-)}
-
-{publicData && (
-  <div className="mt-6 bg-white dark:bg-gray-800 rounded-md shadow-md border border-blue-300 dark:border-blue-700">
-    <div className="flex border-b border-blue-200 dark:border-blue-600">
-      <button
-        onClick={() => setActiveTab("dados")}
-        className={`px-4 py-2 font-semibold ${activeTab === "dados" ? "text-blue-700 border-b-2 border-blue-700" : "text-gray-600"}`}
-      >
-        📌 Dados Formatados
-      </button>
-      <button
-        onClick={() => setActiveTab("json")}
-        className={`px-4 py-2 font-semibold ${activeTab === "json" ? "text-blue-700 border-b-2 border-blue-700" : "text-gray-600"}`}
-      >
-        🧾 JSON Completo
-      </button>
-    </div>
-
-    {activeTab === "dados" && (
-      <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-800 dark:text-gray-200">
-        <p><strong className="text-blue-600 dark:text-blue-400">🟢 Status:</strong> {publicData.status || "Não informado"}</p>
-        <p><strong className="text-blue-600 dark:text-blue-400">📅 Abertura:</strong> {publicData.abertura || "Não informado"}</p>
-        <p><strong className="text-blue-600 dark:text-blue-400">🏢 Razão Social:</strong> {publicData.razao_social || "Não informado"}</p>
-        <p><strong className="text-blue-600 dark:text-blue-400">🎭 Nome Fantasia:</strong> {publicData.fantasia || "Não informado"}</p>
-        <p><strong className="text-blue-600 dark:text-blue-400">🏛️ Natureza Jurídica:</strong> {publicData.natureza_juridica || "Não informado"}</p>
-        <p><strong className="text-blue-600 dark:text-blue-400">💰 Capital Social:</strong> {publicData.capital_social || "Não informado"}</p>
-        <p><strong className="text-blue-600 dark:text-blue-400">📍 Endereço:</strong> {`${publicData.logradouro || ""}, ${publicData.numero || ""} - ${publicData.bairro || ""}`}</p>
-        <p><strong className="text-blue-600 dark:text-blue-400">🏙️ Município:</strong> {`${publicData.municipio || ""} / ${publicData.uf || ""}`}</p>
-        <p><strong className="text-blue-600 dark:text-blue-400">📮 CEP:</strong> {publicData.cep || "Não informado"}</p>
-      </div>
-    )}
-
-    {activeTab === "json" && (
-      <div className="p-4">
-        <pre className="text-sm whitespace-pre-wrap break-words text-gray-800 dark:text-gray-100">
-          {JSON.stringify(publicData, null, 2)}
-        </pre>
-        <div className="mt-4 flex gap-2">
-  <Button
-    onClick={() => navigator.clipboard.writeText(JSON.stringify(publicData, null, 2))}
-    className="bg-blue-600 hover:bg-blue-700 text-white"
-  >
-    📋 Copiar JSON
-  </Button>
-  <Button
-    onClick={() => {
-      const blob = new Blob([JSON.stringify(publicData, null, 2)], { type: "application/json" });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = "dados_cnpj.json";
-      link.click();
-    }}
-    className="bg-green-600 hover:bg-green-700 text-white"
-  >
-    📁 Baixar JSON
-  </Button>
-</div>
-
+{/* Resultado da análise */}
+<div className="w-full flex justify-center px-4 mt-8 mb-14">
+  <div className="w-full max-w-4xl">
+    <Textarea
+      readOnly
+      rows={10}
+      value={
+        translated && showTranslated && !translated.includes("Erro")
+          ? translated
+          : analysis || "⚠️ Nenhum resultado disponível."
+      }
       
-      </div>
-    )}
+      placeholder={t.placeholder}
+      className="w-full p-5 rounded-xl border border-gray-300 bg-white text-gray-800 shadow-xl resize-none"
+    />
   </div>
-)}
-
-<div className="px-4 pb-4 flex gap-4 flex-wrap">
-  <Button
-    onClick={() => navigator.clipboard.writeText(JSON.stringify(publicData, null, 2))}
-    className="bg-blue-600 hover:bg-blue-700 text-white"
-  >
-    📋 Copiar
-  </Button>
-
-  <Button
-    onClick={() => {
-      const blob = new Blob([JSON.stringify(publicData, null, 2)], { type: "application/json" });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = "dados_cnpj.json";
-      link.click();
-    }}
-    className="bg-green-600 hover:bg-green-700 text-white"
-  >
-    📁 Baixar JSON
-  </Button>
-
-  <Button
-  onClick={() => setShowModal(true)}
-    className="bg-gray-600 hover:bg-gray-700 text-white"
-  > 
-    🔍 Ver em Modal
-  </Button>
 </div>
 
-{showModal && (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div className="bg-white dark:bg-gray-900 rounded-lg p-6 w-full max-w-2xl shadow-xl relative">
-      <button
-        onClick={() => setShowModal(false)}
-        className="absolute top-2 right-2 text-gray-600 hover:text-red-500"
-      >
-        ❌
-      </button>
-      <h2 className="text-xl font-bold mb-4 text-blue-700 dark:text-blue-400">🔍 Visualização dos Dados Públicos</h2>
-      <pre className="text-sm whitespace-pre-wrap break-words text-gray-800 dark:text-gray-100">
-        {JSON.stringify(publicData, null, 2)}
-      </pre>
+  
+      {/* Selo e Certificado */}
+      {typeof score === "number" && score >= 70 && (
+        <div className="text-center mt-6">
+          <img src={seloCertificado} alt="Selo de Conformidade" className="mx-auto w-20 h-20" />
+          <p className="text-green-700 font-semibold mt-2">{t.compliant}</p>
+          <button
+            onClick={() => gerarCertificado(empresa)}
+            className="mt-4 bg-green-700 hover:bg-green-800 text-white font-semibold py-2 px-4 rounded shadow"
+          >
+            📄 Gerar Certificado ESG
+          </button>
+        </div>
+      )}
+  
+      {/* Órgãos Públicos */}
+      {Array.isArray(dadosOrgaos) && dadosOrgaos?.length > 0 && (
+        <div className="mt-6 px-4 max-w-4xl mx-auto">
+          <h2 className="text-xl font-semibold text-green-700 mb-2">🗂️ Dados de Órgãos Públicos</h2>
+          <ul className="bg-white shadow-md rounded p-4">
+            {dadosOrgaos.map((orgao, index) => (
+              <li key={index} className="border-b py-2 text-gray-800">
+                <strong>{orgao.nome}</strong>: {orgao.status}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+  
+      {/* Validação Blockchain */}
+      {score && (
+        <div className={`font-semibold text-center pt-6 ${parseInt(score) >= 70 ? "text-green-700 dark:text-green-400" : "text-red-600"}`}>
+          {t.scoreInfo}
+          {score}%<br />
+          {parseInt(score) >= 70 ? t.compliant : "⚠️ Documento fora dos critérios do GreenCheck."}
+        </div>
+      )}
+  
+  {/* Botão Colapsável de CNPJ */}
+<div className="w-full max-w-4xl mx-auto mt-8">
+  <button
+    onClick={() => setMostrarCNPJ(!mostrarCNPJ)}
+    className="bg-green-700 hover:bg-green-800 text-white font-medium py-2 px-4 rounded shadow transition duration-200"
+  >
+    {mostrarCNPJ ? "⬆️ Ocultar Detalhes do CNPJ" : "🔎 Ver Detalhes do CNPJ"}
+  </button>
+
+  {mostrarCNPJ && (
+    <div className="mt-4 p-4 bg-white dark:bg-gray-800 rounded shadow">
+      <h3 className="text-lg font-bold text-green-600 mb-2">📄 Informações do CNPJ</h3>
+      <p><strong>Status:</strong> {dadosCNPJ?.status || "Não disponível"}</p>
+      <p><strong>Razão Social:</strong> {dadosCNPJ?.razao_social || "Não disponível"}</p>
+      <p><strong>Abertura:</strong> {dadosCNPJ?.abertura || "Não disponível"}</p>
+      <p><strong>Município:</strong> {dadosCNPJ?.municipio || "Não disponível"}</p>
     </div>
-  </div>
-)}
-
-    
-{history.length > 0 && (
-           <div className="mt-6">
-             <h2 className="text-xl font-semibold mb-2">{t.blockchainLabel}</h2>
-             <ul className="text-sm space-y-1 bg-gray-100 dark:bg-gray-800 p-4 rounded-md shadow-md">
-               {history
-                 .filter((item) => item.name.toLowerCase().includes(filter.toLowerCase()))
-                 .map((item, index) => (
-                   <li key={index} className="break-all">
-  <strong>{item.date}:</strong> {item.name} - Score: {item.score} <br />
-  Hash: {item.hash?.slice(0, 24)}...<br />
-  <span className={item.antifraude === "Verificado" ? "text-green-600" : "text-yellow-600"}>
-    {item.antifraude === "Verificado" ? "✔️ Verificado por Dados Públicos" : "⚠️ Pendente de Verificação"}
-  </span>
-</li>
- ))}
-    </ul>
-  </div>
-)}
-
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-6">
-  <Button
-  variant="secondary"
-  className="w-full shadow-md hover:shadow-lg transition cursor-pointer"
-  onClick={() => alert('Validação via sensor IoT (simulada) realizada.')}
->
-  <Lock className="w-4 h-4 mr-2" />
-  Validar com IoT
-</Button>
-
-
-  <Button
-    variant="secondary"
-    className="w-full shadow-md hover:shadow-lg transition cursor-pointer"
-    onClick={() => alert('Abrindo painel de transparência (em construção)...')}
-  >
-    <RefreshCcw className="w-4 h-4 mr-2" />
-    Painel de Transparência
-  </Button>
+  )}
 </div>
 
-
-      </CardContent>
-      </Card>
+)
+  
+      {/* Tabs */}
+      {publicData && (
+        <div className="mt-6 bg-white dark:bg-gray-800 rounded-md shadow-md mx-6">
+          <div className="flex border-b">
+            <button onClick={() => setActiveTab("dados")} className={`px-4 py-2 font-semibold ${activeTab === "dados" ? "text-blue-700 border-b-2 border-blue-700" : "text-gray-600"}`}>
+              📌 Dados Formatados
+            </button>
+            <button onClick={() => setActiveTab("json")} className={`px-4 py-2 font-semibold ${activeTab === "json" ? "text-blue-700 border-b-2 border-blue-700" : "text-gray-600"}`}>
+              🧾 JSON Completo
+            </button>
+          </div>
+          <div className="p-4 text-sm">
+            {activeTab === "dados" ? (
+              <div className="grid md:grid-cols-2 gap-4">
+                <p><strong>Status:</strong> {publicData.status}</p>
+                <p><strong>Razão Social:</strong> {publicData.razao_social}</p>
+                <p><strong>Abertura:</strong> {publicData.abertura}</p>
+                <p><strong>Nome Fantasia:</strong> {publicData.fantasia}</p>
+                <p><strong>Capital Social:</strong> {publicData.capital_social}</p>
+                <p><strong>Município:</strong> {`${publicData.municipio} / ${publicData.uf}`}</p>
+              </div>
+            ) : (
+              <pre className="whitespace-pre-wrap break-words">{JSON.stringify(publicData, null, 2)}</pre>
+            )}
+          </div>
+        </div>
+      )}
+  
+      {/* Histórico com hash */}
+      {historico.length > 0 && (
+        <div className="mt-10 px-6 max-w-4xl mx-auto">
+          <h2 className="text-xl font-bold text-green-700 dark:text-green-300 mb-4">Histórico de Análises</h2>
+          <ul className="space-y-4">
+            {historico.map((item, index) => (
+              <li key={index} className="border rounded-lg p-4 shadow-sm bg-white dark:bg-gray-800">
+                <p><strong>Arquivo:</strong> {item.nome}</p>
+                <p><strong>Hash:</strong> {item.hash}</p>
+                <p><strong>Data:</strong> {new Date(item.data).toLocaleString()}</p>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{item.conteudo.slice(0, 100)}...</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+  
+      {/* Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-900 rounded-lg p-6 w-full max-w-2xl shadow-xl relative">
+            <button onClick={() => setShowModal(false)} className="absolute top-2 right-2 text-gray-600 hover:text-red-500">❌</button>
+            <h2 className="text-xl font-bold mb-4 text-blue-700 dark:text-blue-400">🔍 Visualização dos Dados Públicos</h2>
+            <pre className="text-sm whitespace-pre-wrap break-words text-gray-800 dark:text-gray-100">
+              {JSON.stringify(publicData, null, 2)}
+            </pre>
+          </div>
+        </div>
+      )}
+  
+      {/* Botões antifraude */}
+      <motion.div className="mt-10 px-6">
+        <Card>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-6">
+              <Button variant="secondary" className="w-full shadow-md hover:shadow-lg transition cursor-pointer" onClick={() => alert("Validação via sensor IoT (simulada) realizada.")}>
+                <Lock className="w-4 h-4 mr-2" />
+                Validar com IoT
+              </Button>
+              <Button variant="secondary" className="w-full shadow-md hover:shadow-lg transition cursor-pointer" onClick={() => alert("Consulta pública (simulada) aos órgãos ambientais concluída.")}>
+                <Globe className="w-4 h-4 mr-2" />
+                Verificar com Dados Públicos
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </motion.div>
-  </div> 
-);
-}
+    </div>
+  );
+}  
