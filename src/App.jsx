@@ -11,7 +11,8 @@ import Layout from "./Layout";
 import ContatoFlutuante from "./components/ui/ContatoFlutuante.jsx";
 import Vitrine from "./Vitrine";
 import QuemSomos from "./components/ui/QuemSomos";
-
+import Servicos from "./components/ui/Servicos";
+import ConhecaMais from "./components/ui/ConhecaMais";
 
 export default function App() {
   return (
@@ -28,6 +29,8 @@ export default function App() {
             <Route path="configuracoes" element={<Configuracoes />} />
             <Route path="relatorios" element={<Relatorios />} />
             <Route path="quem-somos" element={<QuemSomos />} />
+            <Route path="servicos" element={<Servicos />} />
+            <Route path="/conheca" element={<ConhecaMais />} />
           </Route>
         </Routes>
       </div>

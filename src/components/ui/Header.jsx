@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import logo from "@/assets/logo-greencheck.png"; // ajuste o caminho se necessário
+import logo from "@/assets/logo-greencheck.png";
 import { Moon, Sun } from "lucide-react";
+import { useLocation, Link } from "react-router-dom";
 
 export default function Header() {
   const [darkMode, setDarkMode] = useState(false);
+  const location = useLocation();
+  const isHome = location.pathname === "/";
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
@@ -24,32 +26,34 @@ export default function Header() {
             </h1>
           </Link>
 
-          {/* Navegação */}
-          <nav className="hidden md:flex items-center space-x-6">
-            <Link
-              to="/"
-              className="text-gray-700 dark:text-gray-200 hover:text-green-600 transition"
-            >
-              Início
-            </Link>
-            <a
-              href="#quem-somos"
-              className="text-gray-700 dark:text-gray-200 hover:text-green-600 transition"
-            >
-              Quem Somos
-            </a>
-            <a
-              href="#servicos"
-              className="text-gray-700 dark:text-gray-200 hover:text-green-600 transition"
-            >
-              Serviços
-            </a>
-            <a
-              href="#contato"
-              className="text-gray-700 dark:text-gray-200 hover:text-green-600 transition"
-            >
-              Contato
-            </a>
+          {/* Navegação + Botão de Tema */}
+          <div className="flex items-center space-x-4">
+            <nav className="hidden md:flex items-center space-x-6">
+              <Link
+                to={isHome ? "/analisar" : "/"}
+                className="text-gray-700 dark:text-gray-200 hover:text-green-600 transition"
+              >
+                Início
+              </Link>
+              <Link
+                to="/quem-somos"
+                className="text-gray-700 dark:text-gray-200 hover:text-green-600 transition"
+              >
+                Quem Somos
+              </Link>
+              <Link
+                to="/servicos"
+                className="text-gray-700 dark:text-gray-200 hover:text-green-600 transition"
+              >
+                Serviços
+              </Link>
+              <a
+                href="#contato"
+                className="text-gray-700 dark:text-gray-200 hover:text-green-600 transition"
+              >
+                Contato
+              </a>
+            </nav>
 
             {/* Botão modo claro/escuro */}
             <button
@@ -63,7 +67,8 @@ export default function Header() {
                 <Moon className="w-5 h-5 text-gray-700" />
               )}
             </button>
-          </nav>
+          </div>
+
         </div>
       </div>
     </header>

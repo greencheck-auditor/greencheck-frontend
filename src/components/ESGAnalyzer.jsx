@@ -17,8 +17,6 @@ import NormasLink from "@/components/ui/NormasLink";
 import { Link } from "react-router-dom";
 
 
-
-
 const filtrarDadosPublicos = (dados) => {
   const copia = { ...dados };
   delete copia.telefone;
@@ -55,7 +53,6 @@ export default function ESGAnalyzer() {
   const [fileName, setFileName] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState("");
-  const [translated, setTranslated] = useState("");
   const [darkMode, setDarkMode] = useState(false);
   const [language, setLanguage] = useState(() => localStorage.getItem("language") || "pt");
   const [speaking, setSpeaking] = useState(false);
@@ -63,12 +60,11 @@ export default function ESGAnalyzer() {
   const [lastHash, setLastHash] = useState("0000000000");
   const [history, setHistory] = useState([]);
   const [filter, setFilter] = useState("");
-  const [email, setEmail] = useState("");
+  const [emails, setEmails] = useState("");
   const [cnpjInfo, setCnpjInfo] = useState(null);
   const [publicData, setPublicData] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [activeTab, setActiveTab] = useState("dados");
-  const [dadosOrgaos, setDadosOrgaos] = useState(null);
   const [analysisData, setAnalysisData] = useState({});
   const empresa = analysisData?.empresa || "Empresa Auditada";
   const [arquivo, setArquivo] = useState(null);
@@ -79,6 +75,10 @@ export default function ESGAnalyzer() {
   const [score, setScore] = useState(null);
   const [mostrarCNPJ, setMostrarCNPJ] = useState(false);
   const t = translations[language] || translations["pt"];
+  const [mostrarDetalhes, setMostrarDetalhes] = useState(false);
+  const [dadosOrgaos, setDadosOrgaos] = useState(null);
+  const [selectedLanguage, setSelectedLanguage] = useState("en");
+  const [translated, setTranslated] = useState("");
 
   useEffect(() => {
     localStorage.setItem("language", language);
@@ -107,6 +107,22 @@ export default function ESGAnalyzer() {
     setAnalysis("");
   };
   
+  const handleBuscarDadosPublicos = async () => {
+    if (!cnpjInfo?.cnpj) return;
+  
+    try {
+      const response = await fetch(`http://localhost:8000/orgaos-publicos/${cnpjInfo.cnpj}`);
+      const data = await response.json();
+  
+      setDadosOrgaos(data);         // ← aqui você armazena os dados públicos
+      setMostrarDetalhes(true);    // ← aqui você ativa a exibição deles na tela
+  
+    } catch (error) {
+      console.error("Erro ao buscar dados dos órgãos públicos:", error);
+    }
+  };
+  
+ 
   const handleAnalyze = async () => {
     if (!file) return;
 
@@ -128,12 +144,15 @@ export default function ESGAnalyzer() {
       
 
       const data = await res.json();
-      const cleanText = (data.texto || "").replace(/[\x00-\x1F\x7F]/g, "");
-      setAnalysis(cleanText);
-      setScore(data.score || null);
-      setCnpjInfo(data.cnpj_info || {});
-      setPublicData(filtrarDadosPublicos(data.dados_publicos || {}));
-      setDadosOrgaos(data.orgaos_publicos || []);
+const cleanText = (data.texto || "").replace(/[\x00-\x1F\x7F]/g, "");
+setAnalysis(cleanText);
+setScore(data.score || null);
+setCnpjInfo(data.cnpj_info || {});
+setPublicData(filtrarDadosPublicos(data.dados_publicos || {}));
+
+// 🔍 Verificação automática nos órgãos públicos
+await handleBuscarDadosPublicos();
+
       
 
       const newEntry = {
@@ -180,42 +199,65 @@ export default function ESGAnalyzer() {
     }
   };
 
+  const translateText = async (text) => {
+    const response = await fetch(
+      `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=pt|${selectedLanguage}`
+    );
+    const data = await response.json();
+    return data?.responseData?.translatedText || text;
+  };
+  
   const handleTranslate = async (text) => {
     try {
       if (!text) return;
-      const response = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=pt|en`);
-      const data = await response.json();
-      console.log("🔍 RESPOSTA DO BACKEND:", data);
-      if (data?.responseData?.translatedText) {
-        setTranslated(data.responseData.translatedText);
-      } else {
-        alert("Falha ao traduzir.");
-      }
+      const translated = await translateText(text);
+      setTranslated(translated);
     } catch (error) {
       alert("Erro de conexão na tradução.");
     }
-  };
+    console.log("🌍 RESPOSTA DO BACKEND:", data);
+
+    if (data?.responseData?.translatedText) {
+      setTranslated(data.responseData.translatedText);
+    } else {
+      alert("Falha na tradução.");
+    }
+  }; 
+     
 
   const handleExportPDF = async () => {
     const doc = new jsPDF();
     const currentDate = new Date().toLocaleString();
     const text = translated || analysis;
     const cleanText = (text || "(sem conteúdo)").normalize("NFKD").replace(/[^\x00-\x7F]/g, "");
-
+  
+    // ⚠️ Verifica se os dados públicos estão carregados
+    if (!dadosOrgaos || !dadosOrgaos.ibama || !dadosOrgaos.aneel || !dadosOrgaos.cetesb) {
+      alert("Antes de exportar, valide o CNPJ com os órgãos públicos.");
+      return;
+    }
+  
+    // ✅ Verifica conformidade com os três órgãos
+    const aprovado =
+      dadosOrgaos.ibama.status === "Regular" &&
+      dadosOrgaos.aneel.status === "Licença válida" &&
+      dadosOrgaos.cetesb.status === "Conforme";
+  
     doc.setFontSize(16);
     doc.text("GreenCheck - Análise ESG", 20, 20);
     doc.setFontSize(12);
     doc.text(`Arquivo: ${fileName}`, 20, 30);
     doc.text(`Data: ${currentDate}`, 20, 38);
     doc.text("Resultado da Análise:", 20, 48);
-
-    if (score && parseInt(score) >= 70) {
+  
+    // ✅ Adiciona selo só se score for bom e estiver aprovado nos órgãos
+    if (score && parseInt(score) >= 70 && aprovado) {
       doc.addImage(seloCertificado, "PNG", 150, 10, 35, 35);
     }
-
+  
     const lines = doc.splitTextToSize(cleanText, 170);
     doc.text(lines, 20, 58);
-
+  
     let y = 58 + lines.length * 7 + 10;
     if (score && parseInt(score) >= 70) {
       doc.setTextColor(0, 150, 0);
@@ -226,49 +268,66 @@ export default function ESGAnalyzer() {
       doc.setTextColor(0, 0, 0);
       doc.setFont("helvetica", "normal");
     }
-
+  
+    // 🔍 Adiciona dados dos órgãos
+    y += 15;
+    doc.setFontSize(11);
+    doc.text("Verificação com Órgãos Públicos:", 20, y);
+    doc.text(`IBAMA: ${dadosOrgaos.ibama.status}`, 20, y + 8);
+    doc.text(`ANEEL: ${dadosOrgaos.aneel.status}`, 20, y + 16);
+    doc.text(`CETESB: ${dadosOrgaos.cetesb.status}`, 20, y + 24);
+    y += 34;
+  
     const qrCode = await QRCode.toDataURL(`GreenCheck|Arquivo: ${fileName} | Score: ${score} | Data: ${currentDate}`);
-    doc.addImage(qrCode, "PNG", 20, y + 20, 30, 30);
-
+    doc.addImage(qrCode, "PNG", 20, y, 30, 30);
+  
     doc.setFontSize(10);
-    doc.text("Assinado digitalmente por:", 60, y + 25);
-    doc.text("Kamila Silva - GreenCheck", 60, y + 31);
-    doc.text(`Data e Hora: ${currentDate}`, 60, y + 37);
-
+    doc.text("Assinado digitalmente por:", 60, y + 5);
+    doc.text("Kamila Silva - GreenCheck", 60, y + 11);
+    doc.text(`Data e Hora: ${currentDate}`, 60, y + 17);
+  
     doc.line(20, 270, 130, 270);
-    doc.text("Assinatura Manual", 20, y + 50);
-    doc.text("Kamila Silva - GreenCheck", 20, y + 55);
-
+    doc.text("Assinatura Manual", 20, y + 40);
+    doc.text("Kamila Silva - GreenCheck", 20, y + 45);
+  
     doc.save(`Relatorio_ESG_${fileName}.pdf`);
   };
+  
 
   const handleSendEmail = async () => {
-    if (!email) {
-      alert("Endereço de e-mail não fornecido.");
+    if (!emails || !emails.includes("@")) {
+      alert("Por favor, insira um ou mais endereços de e-mail válidos.");
       return;
     }
-
+  
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/send-email`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_API_TOKEN}`,
+          
         },
         body: JSON.stringify({
-          fileName,
+          filename,
           score,
           content: analysis,
-          email,
+          email: emails, // <- aqui usamos a variável correta
         }),
       });
-
-      const res = await response.json();
-      alert(res.message || "✅ Enviado para o e-mail com sucesso!");
+  
+      if (!response.ok) {
+        throw new Error("Erro ao enviar o e-mail.");
+      }
+  
+      alert("Relatório enviado com sucesso!");
     } catch (error) {
-      alert("Erro ao enviar e-mail.");
+      alert("Erro ao enviar o e-mail.");
+      console.error("Erro:", error);
     }
   };
+  
+  
+  
 
   const handleSpeak = () => {
     const text = translated || analysis;
@@ -315,13 +374,28 @@ export default function ESGAnalyzer() {
     {analyzing ? "Analisando..." : t.analyze}
   </Button>
 
+  <div className="relative">
   <Button
-    onClick={handleTranslate}
-    disabled={!analysis}
-    className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-xl shadow-md"
+    onClick={() => handleTranslate(analysis)}
+    className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-xl shadow-md flex items-center gap-2"
   >
     {t.translateText}
+
+    <select
+      value={selectedLanguage}
+      onChange={(e) => setSelectedLanguage(e.target.value)}
+      className="bg-green-600 text-white text-sm outline-none"
+    >
+      <option value="pt">PT</option>
+      <option value="en">EN</option>
+      <option value="es">ES</option>
+      <option value="fr">FR</option>
+      <option value="de">DE</option>
+      <option value="it">IT</option>
+    </select>
   </Button>
+</div>
+
 
   <Button
     onClick={handleExportPDF}
@@ -348,23 +422,25 @@ export default function ESGAnalyzer() {
   )}
 </div>
 
-{/* Campo de e-mail e botão de envio */}
-<div className="max-w-4xl mx-auto px-4 mt-10 flex flex-col md:flex-row items-center justify-center gap-4">
-  <Input
+ {/* Campo de e-mail e botão de envio */}
+ <div className="max-w-4xl mx-auto px-4 mt-10 flex flex-col md:flex-row items-center justify-center gap-4">
+  <input
     type="email"
-    placeholder="Digite seu e-mail para envio"
-    value={email}
-    onChange={(e) => setEmail(e.target.value)}
-    className="flex-1 p-3 rounded-md border border-gray-300 bg-white text-gray-800 shadow-md w-full"
+    multiple
+    placeholder="Digite um ou mais e-mails separados por vírgula"
+    value={emails}
+    onChange={(e) => setEmails(e.target.value)}
+    className="w-full md:w-1/2 px-4 py-2 rounded shadow border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500"
   />
   <Button
     onClick={handleSendEmail}
     disabled={!analysis}
-    className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-md shadow-md w-full md:w-auto"
+    className="bg-purple-700 hover:bg-purple-800 text-white px-6 py-2 rounded-xl shadow-md"
   >
-    {t.emailButton}
+    Enviar por E-mail
   </Button>
 </div>
+
 
 {/* Resultado da análise */}
 <div className="w-full flex justify-center px-4 mt-8 mb-14">
@@ -381,6 +457,37 @@ export default function ESGAnalyzer() {
       placeholder={t.placeholder}
       className="w-full p-5 rounded-xl border border-gray-300 bg-white text-gray-800 shadow-xl resize-none"
     />
+ 
+ {mostrarDetalhes && dadosOrgaos && (
+  <div className="mt-6 p-4 bg-white/90 dark:bg-gray-800 rounded-xl shadow-md text-gray-800 dark:text-gray-100">
+    <h2 className="text-xl font-bold mb-4 text-green-700">📄 Verificação com Órgãos Públicos</h2>
+    
+    <div className="space-y-2">
+      <p>
+        <strong>🌿 IBAMA:</strong>{" "}
+        <span className={dadosOrgaos.ibama.status === "Regular" ? "text-green-600 font-semibold" : "text-red-600 font-semibold"}>
+          {dadosOrgaos.ibama.status}
+        </span>
+      </p>
+      
+      <p>
+        <strong>⚡ ANEEL:</strong>{" "}
+        <span className={dadosOrgaos.aneel.status === "Licença válida" ? "text-green-600 font-semibold" : "text-red-600 font-semibold"}>
+          {dadosOrgaos.aneel.status}
+        </span>
+      </p>
+      
+      <p>
+        <strong>🏭 CETESB:</strong>{" "}
+        <span className={dadosOrgaos.cetesb.status === "Conforme" ? "text-green-600 font-semibold" : "text-red-600 font-semibold"}>
+          {dadosOrgaos.cetesb.status}
+        </span>
+      </p>
+    </div>
+  </div>
+)}
+
+ 
   </div>
 </div>
 
